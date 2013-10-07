@@ -61,6 +61,15 @@ class Reader
      */
     protected static $httpClient = null;
 
+
+    /**
+     * HTTPS client object to use for retrieving feeds
+     *
+     * @var ZendHttp\Client
+     */
+    protected static $httpsClient = null;
+
+
     /**
      * Override HTTP PUT and DELETE request methods?
      *
@@ -140,6 +149,29 @@ class Reader
         return static::$httpClient;
     }
 
+
+    /**
+     * Gets the HTTPS client object. If none is set, a new ZendHttp\Client will be used.
+     *
+     * @return ZendHttp\Client
+     */
+    public static function getHttpsClient()
+    {
+        if (!static::$httpsClient instanceof ZendHttp\Client) {
+
+            static::$httpsClient = new ZendHttp\Client();
+
+            $adapter = new ZendHttp\Client\Adapter\Curl();
+            $adapter = $adapter->setCurlOption(CURLOPT_SSL_VERIFYHOST, false);
+            $adapter = $adapter->setCurlOption(CURLOPT_SSL_VERIFYPEER, false);
+
+            static::$httpsClient->setAdapter($adapter);
+        }
+
+        return static::$httpsClient;
+    }
+
+
     /**
      * Toggle using POST instead of PUT and DELETE HTTP methods
      *
@@ -193,10 +225,22 @@ class Reader
         $cache       = self::getCache();
         $feed        = null;
         $responseXml = '';
-        $client      = self::getHttpClient();
+
+        //if uri is https, setOptions to http client
+        if (preg_match("/https:\/\//", $uri)) {
+            $client      = self::getHttpsClient();
+        } else {
+            $client      = self::getHttpClient();
+        }
+
         $client->resetParameters();
+
         $headers = new ZendHttp\Headers();
         $client->setHeaders($headers);
+
+        // Set a user-agent to avoid 403 error status
+        $headers->addHeaderLine('User-Agent', 'Mozilla/5.0 (Windows NT 6.2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1467.0 Safari/537.36');
+
         $client->setUri($uri);
         $cacheId = 'Zend_Feed_Reader_' . md5($uri);
 
@@ -614,6 +658,7 @@ class Reader
     {
         static::$cache              = null;
         static::$httpClient         = null;
+        static::$httpsClient         = null;
         static::$httpMethodOverride = false;
         static::$httpConditionalGet = false;
         static::$extensionManager   = null;
