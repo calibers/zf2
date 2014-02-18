@@ -165,7 +165,7 @@ class Reader
             $adapter = $adapter->setCurlOption(CURLOPT_SSL_VERIFYHOST, false);
             $adapter = $adapter->setCurlOption(CURLOPT_SSL_VERIFYPEER, false);
 
-            static::$httpsClient->setAdapter($adapter);
+            static::$httpsClient->setAdapter($adapter );
         }
 
         return static::$httpsClient;
